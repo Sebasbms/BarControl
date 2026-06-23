@@ -73,6 +73,7 @@ onAuthStateChanged(auth, async (user) => {
         if (currentPath.includes('productos.html')) window.loadProducts();
         if (currentPath.includes('ventas.html')) window.loadProductsForSale();
         if (currentPath.includes('movimientos.html')) window.loadMovements();
+        if (currentPath.includes('dashboard.html')) window.loadDashboard();
         
     } else {
         // Expulsar si no hay sesión
@@ -105,6 +106,52 @@ function applyRoleRestrictions() {
         adminOnlyElements.forEach(el => el.style.display = 'none');
     }
 }
+
+// ==========================================
+// MÓDULO: DASHBOARD (NUEVO)
+// ==========================================
+window.loadDashboard = async () => {
+    const elVentasDia = document.getElementById('ventas-dia');
+    const elRecEfectivo = document.getElementById('rec-efectivo');
+    const elRecTransf = document.getElementById('rec-transf');
+    if (!elVentasDia) return;
+
+    try {
+        const q = query(collection(db, "ventas"));
+        const snapshot = await getDocs(q);
+
+        let ventasDia = 0;
+        let recEfectivo = 0;
+        let recTransf = 0;
+
+        // Obtener el inicio del día de hoy para filtrar
+        const hoy = new Date();
+        const startOfDay = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
+
+        snapshot.forEach(doc => {
+            const venta = doc.data();
+            if (venta.fecha) {
+                const fechaVenta = venta.fecha.toDate().getTime();
+                // Si la venta se hizo hoy
+                if (fechaVenta >= startOfDay) {
+                    ventasDia += venta.cantidad;
+                    if (venta.metodo_pago === 'Efectivo') {
+                        recEfectivo += venta.total;
+                    } else if (venta.metodo_pago === 'Transferencia') {
+                        recTransf += venta.total;
+                    }
+                }
+            }
+        });
+
+        elVentasDia.innerText = ventasDia;
+        elRecEfectivo.innerText = `$${recEfectivo}`;
+        elRecTransf.innerText = `$${recTransf}`;
+
+    } catch (error) {
+        console.error("Error cargando estadísticas del dashboard");
+    }
+};
 
 // ==========================================
 // MÓDULO: USUARIOS
