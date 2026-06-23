@@ -1,0 +1,61 @@
+:root {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --surface-hover: #2d2d2d;
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --danger-color: #cf6679;
+    --success-color: #03dac6;
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --border-color: #333333;
+    --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+nav.sidebar {
+    width: 250px;
+    background-color: var(--surface-color);
+    padding: 20px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+nav.sidebar h2 { color: var(--primary-color); text-align: center; margin-bottom: 30px; }
+nav.sidebar a { color: var(--text-secondary); text-decoration: none; padding: 12px; margin-bottom: 10px; border-radius: 8px; transition: 0.3s; }
+nav.sidebar a:hover, nav.sidebar a.active { background-color: var(--surface-hover); color: var(--text-primary); }
+
+.logout-btn { background: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+.logout-btn:hover { background: var(--danger-color); color: #fff; }
+
+/* Main Content */
+main { flex: 1; padding: 30px; overflow-y: auto; }
+h1 { margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+
+/* Dashboard Cards */
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.card { background-color: var(--surface-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
+.card h3 { color: var(--text-secondary); font-size: 1rem; margin-bottom: 10px; }
+.card p.value { font-size: 2rem; font-weight: bold; color: var(--success-color); }
+
+/* Login Form */
+.auth-container { display: flex; justify-content: center; align-items: center; width: 100%; height: 100vh; }
+.auth-card { background-color: var(--surface-color); padding: 40px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; border: 1px solid var(--border-color);}
+.form-group { margin-bottom: 15px; }
+input { width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; }
+input:focus { outline: none; border-color: var(--primary-color); }
+button.btn-primary { background-color: var(--primary-color); color: #fff; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+button.btn-primary:hover { background-color: var(--primary-hover); }
+
+@media (max-width: 768px) { body { flex-direction: column; } nav.sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); } }

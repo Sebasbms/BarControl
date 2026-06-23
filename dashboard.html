@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Control de Barra</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js" defer></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>BAR CONTROL</h2>
+        <a href="dashboard.html" class="active">Dashboard</a>
+        <a href="productos.html">Productos</a>
+        <a href="ventas.html">Ventas</a>
+        <a href="movimientos.html">Movimientos</a>
+        <a href="reportes.html" class="admin-only">Reportes</a>
+        <a href="usuarios.html" class="admin-only">Usuarios</a>
+        
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="window.logout()" class="logout-btn">Cerrar Sesión</button>
+            <div style="text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
+                Developed by SeBaS
+            </div>
+        </div>
+    </nav>
+    <main>
+        <h1>Resumen de Hoy</h1>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Ventas del Día</h3>
+                <p class="value" id="ventas-dia">0</p>
+            </div>
+            <div class="card">
+                <h3>Recaudación Efectivo</h3>
+                <p class="value" id="rec-efectivo">$0</p>
+            </div>
+            <div class="card">
+                <h3>Recaudación Transferencia</h3>
+                <p class="value" id="rec-transf">$0</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
