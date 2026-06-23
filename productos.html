@@ -18,13 +18,13 @@
         <a href="usuarios.html" class="admin-only">Usuarios</a>
         <button onclick="window.logout()" class="logout-btn">Salir</button>
     </nav>
-    <main class="main-scroll" style="padding-bottom: 40px;">
+    <main class="main-scroll">
         <h1>Control de Artículos y Promos</h1>
 
         <div class="card" style="margin-bottom: 20px;">
             <h3>+ Crear Nueva Categoría</h3>
             <form id="form-categoria" onsubmit="window.saveCategory(event)" style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
-                <input type="text" id="new_category_name" placeholder="Ej: Cervezas, Vinos, Promos..." style="flex: 1; min-width: 200px;" required autocomplete="off">
+                <input type="text" id="new_category_name" placeholder="Ej: Cervezas, Gaseosas, Promos..." style="flex: 1; min-width: 200px;" required autocomplete="off">
                 <button type="submit" class="btn-primary" style="padding: 10px 20px;">Agregar</button>
             </form>
         </div>
@@ -35,35 +35,32 @@
                 <div class="dashboard-grid">
                     <div class="form-group">
                         <label>Nombre Comercial</label>
-                        <input type="text" id="nombre" placeholder="Ej: Quilmes 1L o Combo Fernet" required autocomplete="off">
+                        <input type="text" id="nombre" placeholder="Ej: Quilmes 1L o Combo Smirnoff" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label>Categoría</label>
                         <select id="categoria" required></select>
                     </div>
                     <div class="form-group">
-                        <label>Presentación / Tamaño</label>
-                        <input type="text" id="marca" placeholder="Ej: Botella 1L / 1 Botella + 3 Speeds" required autocomplete="off">
+                        <label>Presentación / Tamaño / Detalle Combo</label>
+                        <input type="text" id="marca" placeholder="Ej: Botella 1L / 1 Smirnoff + 3 Speed" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label>Precio Venta ($)</label>
                         <input type="number" id="precio_venta" placeholder="0" required>
                     </div>
                     <div class="form-group">
-                        <label>Stock Disponible</label>
+                        <label>Stock Inicial</label>
                         <input type="number" id="stock" placeholder="0" required>
                     </div>
                     <div class="form-group">
-                        <label>Tipo de Artículo</label>
+                        <label>Tipo de Registro</label>
                         <select id="tipo_articulo">
                             <option value="Normal">Artículo Normal</option>
                             <option value="Promo">Promoción / Combo Especial</option>
                         </select>
                     </div>
                 </div>
-                <input type="hidden" id="precio_compra" value="0">
-                <input type="hidden" id="stock_minimo" value="5">
-                <input type="hidden" id="unidad" value="U">
                 <button type="submit" class="btn-primary">Guardar en Sistema</button>
             </form>
         </div>

@@ -15,13 +15,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-const secondaryAuth = getAuth(secondaryApp);
-
 let currentUserRole = null;
 let currentUserName = "Vendedor";
 
-// Memoria interna del Carrito de Alta Velocidad
 let LOCAL_CART = {};
 let MASTER_ITEMS = [];
 let ACTIVE_CATEGORY_FILTER = "TODOS";
@@ -51,7 +47,6 @@ onAuthStateChanged(auth, async (user) => {
             }
         } catch (e) { console.log(e); }
 
-        // REDIRECCIÓN INTELIGENTE: Si es Vendedor, va directo a Ventas Rápida
         if (currentPath.includes('login.html') || currentPath.endsWith('/') || currentPath.endsWith('index.html')) {
             if (currentUserRole === 'Cajero' || currentUserRole === 'Barra') {
                 window.location.href = 'ventas.html';
@@ -80,7 +75,7 @@ function applyRoleRestrictions() {
 }
 
 // ==========================================
-// MÓDULO INTERFAZ POS DE ALTA VELOCIDAD
+// MÓDULO INTERFAZ CAJA RÁPIDA (POS)
 // ==========================================
 window.loadPOSMenu = async () => {
     const grid = document.getElementById('pos_grid');
@@ -88,7 +83,6 @@ window.loadPOSMenu = async () => {
     if (!grid) return;
 
     try {
-        // 1. Cargar Categorías en la Barra superior
         const catSnapshot = await getDocs(query(collection(db, "categorias"), orderBy("nombre")));
         catBar.innerHTML = `<button class="category-btn ${ACTIVE_CATEGORY_FILTER === 'TODOS' ? 'active':''}" onclick="window.filterPOSCategory('TODOS')">🌟 TODOS</button>`;
         catSnapshot.forEach(doc => {
@@ -96,7 +90,6 @@ window.loadPOSMenu = async () => {
             catBar.innerHTML += `<button class="category-btn ${ACTIVE_CATEGORY_FILTER === c.nombre ? 'active':''}" onclick="window.filterPOSCategory('${c.nombre}')">🏷️ ${c.nombre}</button>`;
         });
 
-        // 2. Cargar Artículos Maestros
         const snapshot = await getDocs(query(collection(db, "productos"), orderBy("nombre")));
         MASTER_ITEMS = [];
         snapshot.forEach(doc => {
@@ -140,16 +133,16 @@ window.renderPOSGrid = (items) => {
 
 window.changeQTY = (id, delta, maxStock) => {
     const el = document.getElementById(`qty_${id}`);
+    if (!el) return;
     let currentQty = Number(el.innerText);
     currentQty += delta;
     if (currentQty < 1) currentQty = 1;
     if (currentQty > maxStock) {
-        showModal("Límite de Stock", "No puedes vender más del stock real en barra.");
+        showModal("Límite de Stock", "No hay suficiente mercadería física en barra.");
         currentQty = maxStock;
     }
     el.innerText = currentQty;
     
-    // Si ya estaba en el carrito, actualizar cantidad de fondo
     if (LOCAL_CART[id]) {
         LOCAL_CART[id].cantidad = currentQty;
         window.updateCartUI();
@@ -158,7 +151,8 @@ window.changeQTY = (id, delta, maxStock) => {
 
 window.addToCart = (id) => {
     const item = MASTER_ITEMS.find(i => i.id === id);
-    const targetQty = Number(document.getElementById(`qty_${id}`).innerText);
+    const elStr = document.getElementById(`qty_${id}`).innerText;
+    const targetQty = Number(elStr);
 
     LOCAL_CART[id] = {
         nombre: item.nombre,
@@ -172,6 +166,7 @@ window.addToCart = (id) => {
 window.updateCartUI = () => {
     const totalEl = document.getElementById('carrito-total');
     const countEl = document.getElementById('carrito-count');
+    if (!totalEl) return;
     
     let total = 0;
     let count = 0;
@@ -182,26 +177,23 @@ window.updateCartUI = () => {
     });
 
     totalEl.innerText = `$${total}`;
-    countEl.innerText = `${count} artículos listos`;
+    countEl.innerText = `${count} ítems seleccionados`;
 };
 
 window.filterPOSCategory = (categoryName) => {
     ACTIVE_CATEGORY_FILTER = categoryName;
     window.filterPOSItems();
-    window.loadPOSMenu(); // Renderizado de estado de botones
+    window.loadPOSMenu();
 };
 
 window.filterPOSItems = () => {
     const searchVal = document.getElementById('pos_search').value.toLowerCase().trim();
-    
     let filtered = MASTER_ITEMS;
 
-    // Filtro por categoría
     if (ACTIVE_CATEGORY_FILTER !== 'TODOS') {
         filtered = filtered.filter(i => i.categoria === ACTIVE_CATEGORY_FILTER);
     }
 
-    // Filtro por buscador rápido
     if (searchVal !== '') {
         filtered = filtered.filter(i => i.nombre.toLowerCase().includes(searchVal) || i.marca.toLowerCase().includes(searchVal));
     }
@@ -211,23 +203,20 @@ window.filterPOSItems = () => {
 
 window.checkoutPOS = async () => {
     if (Object.keys(LOCAL_CART).length === 0) {
-        showModal("Carrito Vacío", "Agrega al menos un artículo para cobrar.");
+        showModal("Carrito Vacío", "Selecciona al menos un artículo.");
         return;
     }
 
     const metodoPago = document.getElementById('pos_metodo_pago').value;
 
     try {
-        // Ejecutar transacciones por cada ítem del carrito flotante
         for (const id of Object.keys(LOCAL_CART)) {
             const cartItem = LOCAL_CART[id];
             const productRef = doc(db, "productos", id);
             const freshSnap = await getDoc(productRef);
             const currentStock = freshSnap.data().stock;
-
             const finalTotal = cartItem.precio * cartItem.cantidad;
 
-            // Registrar Venta
             await addDoc(collection(db, "ventas"), {
                 producto_id: id,
                 producto_nombre: cartItem.nombre,
@@ -238,23 +227,21 @@ window.checkoutPOS = async () => {
                 fecha: serverTimestamp()
             });
 
-            // Descontar
             await updateDoc(productRef, { stock: currentStock - cartItem.cantidad });
-            // Movimiento
             await window.logMovement('Venta POS', cartItem.nombre, -cartItem.cantidad, `Caja Rápida - ${metodoPago}`);
         }
 
-        showModal("¡Cobrado!", "Venta registrada. Carrito limpio.");
+        showModal("¡Cobrado!", "Operación exitosa.");
         LOCAL_CART = {};
         window.updateCartUI();
         window.loadPOSMenu();
     } catch (e) {
-        showModal("Error", "Ocurrió un fallo en el cobro rápido.");
+        showModal("Error", "No se pudo liquidar el total.");
     }
 };
 
 // ==========================================
-// MÓDULO ANTERIOR ADAPTADO (ADMINISTRACIÓN)
+// MÓDULO ADMINISTRACIÓN COMPLETA
 // ==========================================
 window.saveCategory = async (e) => {
     e.preventDefault();
