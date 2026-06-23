@@ -2,18 +2,155 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Barra</title>
-    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POS de Barra - Único</title>
     <link rel="stylesheet" href="style.css">
-    <script type="module" src="app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js');
-        }
-    </script>
+    <script type="module" src="app.js" defer></script>
 </head>
-<body style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-    <div style="color: var(--primary-color); font-size: 1.5rem;">Cargando sistema...</div>
+<body>
+
+    <nav class="sidebar">
+        <h2 class="brand-title">BARRA POS</h2>
+        <a href="#" id="tab-link-ventas" class="nav-btn active" onclick="window.switchTab('ventas')">⚡ Venta</a>
+        <a href="#" id="tab-link-productos" class="nav-btn admin-only" onclick="window.switchTab('productos')">📦 Artículos</a>
+        <a href="#" id="tab-link-dashboard" class="nav-btn admin-only" onclick="window.switchTab('dashboard')">📈 Resumen</a>
+        <a href="#" id="tab-link-movimientos" class="nav-btn" onclick="window.switchTab('movimientos')">📋 Historial</a>
+        <button onclick="window.logout()" class="logout-btn">Salir</button>
+    </nav>
+
+    <main>
+        <section id="tab-ventas" class="app-tab active">
+            <div class="pos-header">
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <input type="text" id="pos_search" placeholder="🔍 Buscar artículo o promoción..." oninput="window.filterPOSItems()" autocomplete="off">
+                </div>
+                <div class="categories-bar" id="pos_categories_bar">
+                    </div>
+            </div>
+
+            <div class="tab-content-scroll">
+                <div class="articulos-grid" id="pos_grid">
+                    </div>
+            </div>
+
+            <div class="carrito-flotante">
+                <div class="carrito-summary">
+                    <span id="carrito-count">0 ítems listos</span>
+                    <h2 id="carrito-total">$0</h2>
+                </div>
+                <div class="carrito-actions">
+                    <select id="pos_metodo_pago" class="pay-mode-select">
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="Transferencia">📱 Transferencia</option>
+                    </select>
+                    <button onclick="window.checkoutPOS()" class="btn-cobrar">Cobrar</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-productos" class="app-tab">
+            <div class="tab-content-scroll" style="padding: 16px;">
+                <h1>Control de Artículos y Promos</h1>
+
+                <div class="card" style="margin-bottom: 16px;">
+                    <h3>+ Crear Categoría</h3>
+                    <form id="form-categoria" onsubmit="window.saveCategory(event)" style="display: flex; gap: 8px; margin-top: 8px;">
+                        <input type="text" id="new_category_name" placeholder="Ej: Cervezas, Promos..." required autocomplete="off">
+                        <button type="submit" class="btn-primary" style="width: auto; padding: 0 16px;">Agregar</button>
+                    </form>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3>Registrar Artículo o Combo</h3>
+                    <form id="form-producto" onsubmit="window.saveProduct(event)" style="margin-top: 10px;">
+                        <div class="form-group">
+                            <label>Nombre Comercial</label>
+                            <input type="text" id="nombre" placeholder="Ej: Quilmes 1L o Combo Smirnoff" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="categoria" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Presentación / Contenido de la Promo</label>
+                            <input type="text" id="marca" placeholder="Ej: Botella / 1 Smirnoff + 3 Speed" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label>Precio Venta ($)</label>
+                            <input type="number" id="precio_venta" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Disponible en Barra</label>
+                            <input type="number" id="stock" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Registro</label>
+                            <select id="tipo_articulo">
+                                <option value="Normal">Artículo Normal</option>
+                                <option value="Promo">Promoción / Combo Especial</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 8px;">Guardar en Sistema</button>
+                    </form>
+                </div>
+
+                <h3>Lista General de Inventario</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Detalle</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productos-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-dashboard" class="app-tab">
+            <div class="tab-content-scroll" style="padding: 16px;">
+                <h1>Resumen de Caja General</h1>
+                <div class="card" style="margin-bottom: 16px; border-left: 4px solid var(--primary-color);">
+                    <p>Total Artículos Vendidos</p>
+                    <h2 id="ventas-dia" style="font-size: 2rem; color: var(--primary-color);">0</h2>
+                </div>
+                <div class="card" style="margin-bottom: 16px; border-left: 4px solid var(--success-color);">
+                    <p>Recaudado en Efectivo</p>
+                    <h2 id="rec-efectivo" style="font-size: 2rem; color: var(--success-color);">$0</h2>
+                </div>
+                <div class="card" style="margin-bottom: 16px; border-left: 4px solid #a855f7;">
+                    <p>Recaudado por Transferencias</p>
+                    <h2 id="rec-transf" style="font-size: 2rem; color: #a855f7;">$0</h2>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-movimientos" class="app-tab">
+            <div class="tab-content-scroll" style="padding: 16px;">
+                <h1>Historial Reciente de Auditoría</h1>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Acción</th>
+                                <th>Artículo</th>
+                                <th>Cant.</th>
+                                <th>Detalle</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movimientos-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
 </body>
 </html>

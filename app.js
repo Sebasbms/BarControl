@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCDUFlyIbHSUv51EtNeceJcb6maKX4vhtc",
@@ -21,6 +21,24 @@ let currentUserName = "Vendedor";
 let LOCAL_CART = {};
 let MASTER_ITEMS = [];
 let ACTIVE_CATEGORY_FILTER = "TODOS";
+
+// SISTEMA DE CAMBIO DE PESTAÑAS (EVITA SUBDIVIDIR ARCHIVOS HTML)
+window.switchTab = (tabId) => {
+    document.querySelectorAll('.app-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    const targetLink = document.getElementById(`tab-link-${tabId}`);
+    
+    if (targetTab) targetTab.classList.add('active');
+    if (targetLink) targetLink.classList.add('active');
+
+    // Carga selectiva según pestaña abierta
+    if (tabId === 'ventas') window.loadPOSMenu();
+    if (tabId === 'productos') { window.loadCategories(); window.loadProducts(); }
+    if (tabId === 'dashboard') window.loadDashboard();
+    if (tabId === 'movimientos') window.loadMovements();
+};
 
 window.showModal = (title, message) => {
     const overlay = document.createElement('div');
@@ -45,21 +63,14 @@ onAuthStateChanged(auth, async (user) => {
                 currentUserName = userDoc.data().username || "Cajero";
                 applyRoleRestrictions();
             }
-        } catch (e) { console.log(e); }
+        } catch (e) { console.error(e); }
 
-        if (currentPath.includes('login.html') || currentPath.endsWith('/') || currentPath.endsWith('index.html')) {
-            if (currentUserRole === 'Cajero' || currentUserRole === 'Barra') {
-                window.location.href = 'ventas.html';
-            } else {
-                window.location.href = 'dashboard.html';
-            }
+        if (currentPath.includes('login.html')) {
+            window.location.href = 'index.html';
+        } else {
+            // Por defecto, abre la caja registradora instantáneamente
+            window.switchTab('ventas');
         }
-        
-        if (currentPath.includes('usuarios.html')) window.loadUsers();
-        if (currentPath.includes('productos.html')) { window.loadCategories(); window.loadProducts(); }
-        if (currentPath.includes('ventas.html')) { window.loadPOSMenu(); }
-        if (currentPath.includes('movimientos.html') || currentPath.includes('dashboard.html')) window.loadMovements();
-        if (currentPath.includes('dashboard.html')) window.loadDashboard();
     } else {
         if (!currentPath.includes('login.html')) window.location.href = 'login.html';
     }
@@ -75,7 +86,7 @@ function applyRoleRestrictions() {
 }
 
 // ==========================================
-// MÓDULO INTERFAZ CAJA RÁPIDA (POS)
+// MÓDULO CONTROL CAJA REGISTRADORA
 // ==========================================
 window.loadPOSMenu = async () => {
     const grid = document.getElementById('pos_grid');
@@ -92,9 +103,7 @@ window.loadPOSMenu = async () => {
 
         const snapshot = await getDocs(query(collection(db, "productos"), orderBy("nombre")));
         MASTER_ITEMS = [];
-        snapshot.forEach(doc => {
-            MASTER_ITEMS.push({ id: doc.id, ...doc.data() });
-        });
+        snapshot.forEach(doc => { MASTER_ITEMS.push({ id: doc.id, ...doc.data() }); });
 
         window.renderPOSGrid(MASTER_ITEMS);
     } catch (e) { console.error(e); }
@@ -102,6 +111,7 @@ window.loadPOSMenu = async () => {
 
 window.renderPOSGrid = (items) => {
     const grid = document.getElementById('pos_grid');
+    if (!grid) return;
     grid.innerHTML = '';
 
     items.forEach(item => {
@@ -138,7 +148,7 @@ window.changeQTY = (id, delta, maxStock) => {
     currentQty += delta;
     if (currentQty < 1) currentQty = 1;
     if (currentQty > maxStock) {
-        showModal("Límite de Stock", "No hay suficiente mercadería física en barra.");
+        showModal("Stock Crítico", "No queda suficiente mercadería en la barra.");
         currentQty = maxStock;
     }
     el.innerText = currentQty;
@@ -151,15 +161,9 @@ window.changeQTY = (id, delta, maxStock) => {
 
 window.addToCart = (id) => {
     const item = MASTER_ITEMS.find(i => i.id === id);
-    const elStr = document.getElementById(`qty_${id}`).innerText;
-    const targetQty = Number(elStr);
+    const targetQty = Number(document.getElementById(`qty_${id}`).innerText);
 
-    LOCAL_CART[id] = {
-        nombre: item.nombre,
-        precio: item.precio_venta,
-        cantidad: targetQty
-    };
-
+    LOCAL_CART[id] = { nombre: item.nombre, precio: item.precio_venta, cantidad: targetQty };
     window.updateCartUI();
 };
 
@@ -168,22 +172,19 @@ window.updateCartUI = () => {
     const countEl = document.getElementById('carrito-count');
     if (!totalEl) return;
     
-    let total = 0;
-    let count = 0;
-
+    let total = 0, count = 0;
     Object.keys(LOCAL_CART).forEach(id => {
         total += LOCAL_CART[id].precio * LOCAL_CART[id].cantidad;
         count += LOCAL_CART[id].cantidad;
     });
 
     totalEl.innerText = `$${total}`;
-    countEl.innerText = `${count} ítems seleccionados`;
+    countEl.innerText = `${count} ítems listos`;
 };
 
 window.filterPOSCategory = (categoryName) => {
     ACTIVE_CATEGORY_FILTER = categoryName;
     window.filterPOSItems();
-    window.loadPOSMenu();
 };
 
 window.filterPOSItems = () => {
@@ -193,20 +194,17 @@ window.filterPOSItems = () => {
     if (ACTIVE_CATEGORY_FILTER !== 'TODOS') {
         filtered = filtered.filter(i => i.categoria === ACTIVE_CATEGORY_FILTER);
     }
-
     if (searchVal !== '') {
         filtered = filtered.filter(i => i.nombre.toLowerCase().includes(searchVal) || i.marca.toLowerCase().includes(searchVal));
     }
-
     window.renderPOSGrid(filtered);
 };
 
 window.checkoutPOS = async () => {
     if (Object.keys(LOCAL_CART).length === 0) {
-        showModal("Carrito Vacío", "Selecciona al menos un artículo.");
+        showModal("Aviso", "Selecciona al menos un artículo.");
         return;
     }
-
     const metodoPago = document.getElementById('pos_metodo_pago').value;
 
     try {
@@ -218,30 +216,23 @@ window.checkoutPOS = async () => {
             const finalTotal = cartItem.precio * cartItem.cantidad;
 
             await addDoc(collection(db, "ventas"), {
-                producto_id: id,
-                producto_nombre: cartItem.nombre,
-                cantidad: cartItem.cantidad,
-                total: finalTotal,
-                metodo_pago: metodoPago,
-                usuario: currentUserName,
-                fecha: serverTimestamp()
+                producto_id: id, producto_nombre: cartItem.nombre, cantidad: cartItem.cantidad,
+                total: finalTotal, metodo_pago: metodoPago, usuario: currentUserName, fecha: serverTimestamp()
             });
 
             await updateDoc(productRef, { stock: currentStock - cartItem.cantidad });
             await window.logMovement('Venta POS', cartItem.nombre, -cartItem.cantidad, `Caja Rápida - ${metodoPago}`);
         }
 
-        showModal("¡Cobrado!", "Operación exitosa.");
+        showModal("Cobrado exitosamente", "El registro fue enviado a base de datos.");
         LOCAL_CART = {};
         window.updateCartUI();
         window.loadPOSMenu();
-    } catch (e) {
-        showModal("Error", "No se pudo liquidar el total.");
-    }
+    } catch (e) { showModal("Error", "Fallo al enviar los datos."); }
 };
 
 // ==========================================
-// MÓDULO ADMINISTRACIÓN COMPLETA
+// ADMINISTRACIÓN INTERNA UNIFICADA
 // ==========================================
 window.saveCategory = async (e) => {
     e.preventDefault();
@@ -250,7 +241,7 @@ window.saveCategory = async (e) => {
         await addDoc(collection(db, "categorias"), { nombre: nameInput.value.trim() });
         nameInput.value = '';
         window.loadCategories();
-    } catch (error) { console.log(error); }
+    } catch (error) { console.error(error); }
 };
 
 window.loadCategories = async () => {
@@ -277,7 +268,7 @@ window.saveProduct = async (e) => {
         await window.logMovement('Creación', producto.nombre, producto.stock, 'Ingreso artículo');
         document.getElementById('form-producto').reset();
         window.loadProducts();
-    } catch (e) { console.log(e); }
+    } catch (e) { console.error(e); }
 };
 
 window.loadProducts = async () => {
