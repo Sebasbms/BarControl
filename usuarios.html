@@ -22,13 +22,43 @@
     </nav>
     <main>
         <h1>Gestión de Usuarios</h1>
-        <div class="card">
-            <h3>Información de Seguridad</h3>
-            <p style="color: var(--text-secondary); margin-top: 10px;">
-                Por motivos de seguridad, la creación de nuevos usuarios y el cambio de contraseñas se realiza directamente desde el panel de <strong>Firebase Authentication</strong>.
-                <br><br>
-                Recuerda que si creas un cajero nuevo (ejemplo: <code>barra1</code>), en Firebase debes registrarlo como <code>barra1@fogon.com</code>.
-            </p>
+        
+        <div class="card" style="margin-bottom: 30px;">
+            <h3>Crear Nuevo Usuario</h3>
+            <form id="form-usuario" onsubmit="window.createNewUser(event)">
+                <div class="dashboard-grid">
+                    <div class="form-group">
+                        <input type="text" id="new_username" placeholder="Nombre de Usuario (ej: barra1)" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="new_password" placeholder="Contraseña (mín. 6 caracteres)" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <select id="new_role" required>
+                            <option value="" disabled selected>-- Seleccionar Rol --</option>
+                            <option value="Cajero">Cajero (Solo ventas)</option>
+                            <option value="Administrador">Administrador (Acceso total)</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 10px;">Crear Usuario</button>
+            </form>
+        </div>
+
+        <h3>Usuarios Registrados</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Rol</th>
+                        <th>Dominio Interno</th>
+                    </tr>
+                </thead>
+                <tbody id="usuarios-tbody">
+                    <tr><td colspan="3" style="text-align: center;">Cargando usuarios...</td></tr>
+                </tbody>
+            </table>
         </div>
     </main>
 </body>
