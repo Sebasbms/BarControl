@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POS de Barra - Único</title>
+    <title>POS de Barra</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="app.js" defer></script>
 </head>
@@ -22,15 +22,13 @@
         <section id="tab-ventas" class="app-tab active">
             <div class="pos-header">
                 <div class="form-group" style="margin-bottom: 8px;">
-                    <input type="text" id="pos_search" placeholder="🔍 Buscar artículo o promoción..." oninput="window.filterPOSItems()" autocomplete="off">
+                    <input type="text" id="pos_search" placeholder="🔍 Buscar artículo..." oninput="window.filterPOSItems()" autocomplete="off">
                 </div>
-                <div class="categories-bar" id="pos_categories_bar">
-                    </div>
+                <div class="categories-bar" id="pos_categories_bar"></div>
             </div>
 
             <div class="tab-content-scroll">
-                <div class="articulos-grid" id="pos_grid">
-                    </div>
+                <div class="articulos-grid" id="pos_grid"></div>
             </div>
 
             <div class="carrito-flotante">
@@ -41,7 +39,7 @@
                 <div class="carrito-actions">
                     <select id="pos_metodo_pago" class="pay-mode-select">
                         <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Transferencia">📱 Transferencia</option>
+                        <option value="Transferencia">📱 Transf.</option>
                     </select>
                     <button onclick="window.checkoutPOS()" class="btn-cobrar">Cobrar</button>
                 </div>
@@ -50,62 +48,39 @@
 
         <section id="tab-productos" class="app-tab">
             <div class="tab-content-scroll" style="padding: 16px;">
-                <h1>Control de Artículos y Promos</h1>
-
+                <h1 style="font-size: 1.4rem;">Artículos y Promos</h1>
                 <div class="card" style="margin-bottom: 16px;">
                     <h3>+ Crear Categoría</h3>
                     <form id="form-categoria" onsubmit="window.saveCategory(event)" style="display: flex; gap: 8px; margin-top: 8px;">
-                        <input type="text" id="new_category_name" placeholder="Ej: Cervezas, Promos..." required autocomplete="off">
-                        <button type="submit" class="btn-primary" style="width: auto; padding: 0 16px;">Agregar</button>
+                        <input type="text" id="new_category_name" placeholder="Ej: Cervezas" required autocomplete="off">
+                        <button type="submit" class="btn-primary" style="width: auto;">Agregar</button>
                     </form>
                 </div>
 
                 <div class="card" style="margin-bottom: 24px;">
-                    <h3>Registrar Artículo o Combo</h3>
+                    <h3>Registrar Artículo</h3>
                     <form id="form-producto" onsubmit="window.saveProduct(event)" style="margin-top: 10px;">
+                        <div class="form-group"><label>Nombre</label><input type="text" id="nombre" placeholder="Ej: Quilmes 1L" required autocomplete="off"></div>
+                        <div class="form-group"><label>Categoría</label><select id="categoria" required></select></div>
+                        <div class="form-group"><label>Presentación</label><input type="text" id="marca" placeholder="Ej: Botella" required autocomplete="off"></div>
+                        <div class="form-group"><label>Precio Venta ($)</label><input type="number" id="precio_venta" required></div>
+                        <div class="form-group"><label>Stock</label><input type="number" id="stock" required></div>
                         <div class="form-group">
-                            <label>Nombre Comercial</label>
-                            <input type="text" id="nombre" placeholder="Ej: Quilmes 1L o Combo Smirnoff" required autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label>Categoría</label>
-                            <select id="categoria" required></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Presentación / Contenido de la Promo</label>
-                            <input type="text" id="marca" placeholder="Ej: Botella / 1 Smirnoff + 3 Speed" required autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label>Precio Venta ($)</label>
-                            <input type="number" id="precio_venta" placeholder="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Stock Disponible en Barra</label>
-                            <input type="number" id="stock" placeholder="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Tipo de Registro</label>
+                            <label>Tipo</label>
                             <select id="tipo_articulo">
-                                <option value="Normal">Artículo Normal</option>
-                                <option value="Promo">Promoción / Combo Especial</option>
+                                <option value="Normal">Normal</option>
+                                <option value="Promo">Promo/Combo</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn-primary" style="margin-top: 8px;">Guardar en Sistema</button>
+                        <button type="submit" class="btn-primary" style="margin-top: 8px;">Guardar</button>
                     </form>
                 </div>
 
-                <h3>Lista General de Inventario</h3>
+                <h3>Inventario</h3>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Categoría</th>
-                                <th>Detalle</th>
-                                <th>Precio</th>
-                                <th>Stock</th>
-                                <th>Acción</th>
-                            </tr>
+                            <tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acción</th></tr>
                         </thead>
                         <tbody id="productos-tbody"></tbody>
                     </table>
@@ -115,35 +90,29 @@
 
         <section id="tab-dashboard" class="app-tab">
             <div class="tab-content-scroll" style="padding: 16px;">
-                <h1>Resumen de Caja General</h1>
+                <h1 style="font-size: 1.4rem;">Caja General</h1>
                 <div class="card" style="margin-bottom: 16px; border-left: 4px solid var(--primary-color);">
-                    <p>Total Artículos Vendidos</p>
-                    <h2 id="ventas-dia" style="font-size: 2rem; color: var(--primary-color);">0</h2>
+                    <p>Artículos Vendidos</p>
+                    <h2 id="ventas-dia" style="font-size: 1.8rem; color: var(--primary-color);">0</h2>
                 </div>
                 <div class="card" style="margin-bottom: 16px; border-left: 4px solid var(--success-color);">
-                    <p>Recaudado en Efectivo</p>
-                    <h2 id="rec-efectivo" style="font-size: 2rem; color: var(--success-color);">$0</h2>
+                    <p>Efectivo</p>
+                    <h2 id="rec-efectivo" style="font-size: 1.8rem; color: var(--success-color);">$0</h2>
                 </div>
                 <div class="card" style="margin-bottom: 16px; border-left: 4px solid #a855f7;">
-                    <p>Recaudado por Transferencias</p>
-                    <h2 id="rec-transf" style="font-size: 2rem; color: #a855f7;">$0</h2>
+                    <p>Transferencias</p>
+                    <h2 id="rec-transf" style="font-size: 1.8rem; color: #a855f7;">$0</h2>
                 </div>
             </div>
         </section>
 
         <section id="tab-movimientos" class="app-tab">
             <div class="tab-content-scroll" style="padding: 16px;">
-                <h1>Historial Reciente de Auditoría</h1>
+                <h1 style="font-size: 1.4rem;">Auditoría</h1>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Hora</th>
-                                <th>Acción</th>
-                                <th>Artículo</th>
-                                <th>Cant.</th>
-                                <th>Detalle</th>
-                            </tr>
+                            <tr><th>Hora</th><th>Acción</th><th>Artículo</th><th>Cant.</th></tr>
                         </thead>
                         <tbody id="movimientos-tbody"></tbody>
                     </table>
@@ -151,6 +120,5 @@
             </div>
         </section>
     </main>
-
 </body>
 </html>
