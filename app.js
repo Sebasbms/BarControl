@@ -51,9 +51,6 @@ window.showModal = (title, message) => {
     document.body.appendChild(overlay);
 };
 
-// ==========================================
-// ESTA ES LA FUNCIÓN DE LOGIN QUE FALTABA
-// ==========================================
 window.login = async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value.trim().toLowerCase();
@@ -79,9 +76,11 @@ onAuthStateChanged(auth, async (user) => {
             }
         } catch (e) { console.error(e); }
 
-        if (currentPath.includes('login.html') || currentPath.endsWith('/') || currentPath.endsWith('index.html')) {
-            window.location.href = 'index.html'; // Manda al único archivo unificado
+        // BUCLE INFINITO SOLUCIONADO AQUÍ
+        if (currentPath.includes('login.html')) {
+            window.location.href = 'index.html'; 
         } else {
+            // Si ya estamos en el index, simplemente cargamos la pestaña de ventas sin recargar
             window.switchTab('ventas');
         }
     } else {
@@ -161,7 +160,7 @@ window.changeQTY = (id, delta, maxStock) => {
     currentQty += delta;
     if (currentQty < 1) currentQty = 1;
     if (currentQty > maxStock) {
-        showModal("Stock Crítico", "No queda suficiente mercadería en la barra.");
+        window.showModal("Stock Crítico", "No queda suficiente mercadería en la barra.");
         currentQty = maxStock;
     }
     el.innerText = currentQty;
@@ -215,7 +214,7 @@ window.filterPOSItems = () => {
 
 window.checkoutPOS = async () => {
     if (Object.keys(LOCAL_CART).length === 0) {
-        showModal("Aviso", "Selecciona al menos un artículo.");
+        window.showModal("Aviso", "Selecciona al menos un artículo.");
         return;
     }
     const metodoPago = document.getElementById('pos_metodo_pago').value;
@@ -237,11 +236,11 @@ window.checkoutPOS = async () => {
             await window.logMovement('Venta POS', cartItem.nombre, -cartItem.cantidad, `Caja Rápida - ${metodoPago}`);
         }
 
-        showModal("Cobrado exitosamente", "El registro fue enviado a base de datos.");
+        window.showModal("Cobrado exitosamente", "El registro fue enviado a base de datos.");
         LOCAL_CART = {};
         window.updateCartUI();
         window.loadPOSMenu();
-    } catch (e) { showModal("Error", "Fallo al enviar los datos."); }
+    } catch (e) { window.showModal("Error", "Fallo al enviar los datos."); }
 };
 
 // ==========================================
