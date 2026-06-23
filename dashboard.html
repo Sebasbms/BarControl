@@ -10,35 +10,51 @@
 <body>
     <nav class="sidebar">
         <h2>BAR CONTROL</h2>
-        <a href="dashboard.html" class="active">Dashboard</a>
-        <a href="productos.html">Productos</a>
+        <a href="dashboard.html" class="active">Resumen</a>
+        <a href="productos.html">Artículos</a>
         <a href="ventas.html">Ventas</a>
         <a href="movimientos.html">Movimientos</a>
         <a href="reportes.html" class="admin-only">Reportes</a>
         <a href="usuarios.html" class="admin-only">Usuarios</a>
-        
-        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
-            <button onclick="window.logout()" class="logout-btn">Cerrar Sesión</button>
-            <div style="text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
-                Developed by SeBaS
-            </div>
-        </div>
+        <button onclick="window.logout()" class="logout-btn">Salir</button>
     </nav>
     <main>
-        <h1>Resumen de Hoy</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h1>Resumen de Hoy</h1>
+            <button onclick="window.clearDailyRegister()" class="logout-btn" style="margin-top:0; background: rgba(239, 68, 68, 0.1);">Cerrar Caja (Limpiar)</button>
+        </div>
+        
         <div class="dashboard-grid">
             <div class="card">
-                <h3>Ventas del Día</h3>
+                <h3>Artículos Vendidos</h3>
                 <p class="value" id="ventas-dia">0</p>
             </div>
             <div class="card">
-                <h3>Recaudación Efectivo</h3>
-                <p class="value" id="rec-efectivo">$0</p>
+                <h3>Caja Efectivo</h3>
+                <p class="value money-efectivo" id="rec-efectivo">$0</p>
             </div>
             <div class="card">
-                <h3>Recaudación Transferencia</h3>
-                <p class="value" id="rec-transf">$0</p>
+                <h3>Caja Transferencia</h3>
+                <p class="value money-transf" id="rec-transf">$0</p>
             </div>
+        </div>
+
+        <h3 style="margin-bottom: 15px;">Últimos Movimientos en tiempo real</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Acción</th>
+                        <th>Artículo</th>
+                        <th>Cant.</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+                <tbody id="movimientos-tbody">
+                    <tr><td colspan="5" style="text-align: center;">Cargando historial...</td></tr>
+                </tbody>
+            </table>
         </div>
     </main>
 </body>
