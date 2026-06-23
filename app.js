@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -22,7 +22,6 @@ let LOCAL_CART = {};
 let MASTER_ITEMS = [];
 let ACTIVE_CATEGORY_FILTER = "TODOS";
 
-// SISTEMA DE CAMBIO DE PESTAÑAS (EVITA SUBDIVIDIR ARCHIVOS HTML)
 window.switchTab = (tabId) => {
     document.querySelectorAll('.app-tab').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -33,7 +32,6 @@ window.switchTab = (tabId) => {
     if (targetTab) targetTab.classList.add('active');
     if (targetLink) targetLink.classList.add('active');
 
-    // Carga selectiva según pestaña abierta
     if (tabId === 'ventas') window.loadPOSMenu();
     if (tabId === 'productos') { window.loadCategories(); window.loadProducts(); }
     if (tabId === 'dashboard') window.loadDashboard();
@@ -45,12 +43,28 @@ window.showModal = (title, message) => {
     overlay.className = 'custom-modal-overlay';
     overlay.innerHTML = `
         <div class="custom-modal">
-            <h3>${title}</h3>
-            <p>${message}</p>
+            <h3 style="color:var(--primary-color); margin-bottom:10px;">${title}</h3>
+            <p style="color:var(--text-secondary); margin-bottom:20px;">${message}</p>
             <button class="btn-primary" onclick="this.parentElement.parentElement.remove()" style="width: 100%;">Aceptar</button>
         </div>
     `;
     document.body.appendChild(overlay);
+};
+
+// ==========================================
+// ESTA ES LA FUNCIÓN DE LOGIN QUE FALTABA
+// ==========================================
+window.login = async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const fakeEmail = `${username}@fogon.com`;
+    
+    try {
+        await signInWithEmailAndPassword(auth, fakeEmail, password);
+    } catch (error) {
+        window.showModal("Error de Acceso", "Usuario o contraseña incorrectos.");
+    }
 };
 
 onAuthStateChanged(auth, async (user) => {
@@ -65,10 +79,9 @@ onAuthStateChanged(auth, async (user) => {
             }
         } catch (e) { console.error(e); }
 
-        if (currentPath.includes('login.html')) {
-            window.location.href = 'index.html';
+        if (currentPath.includes('login.html') || currentPath.endsWith('/') || currentPath.endsWith('index.html')) {
+            window.location.href = 'index.html'; // Manda al único archivo unificado
         } else {
-            // Por defecto, abre la caja registradora instantáneamente
             window.switchTab('ventas');
         }
     } else {

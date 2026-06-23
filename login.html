@@ -2,28 +2,25 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso - Control de Barra</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Acceso - POS Barra</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="app.js" defer></script>
 </head>
-<body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <h2 style="margin-bottom: 20px; color: var(--primary-color);">Acceso al Sistema</h2>
-            <form id="login-form" onsubmit="window.login(event)">
-                <div class="form-group">
-                    <input type="text" id="username" placeholder="Usuario (ej: admin o barra1)" required autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <input type="password" id="password" placeholder="Contraseña" required>
-                </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Ingresar</button>
-            </form>
-            <div class="dev-signature" style="margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
-                Developed by SeBaS
+<body class="login-body">
+    <div class="auth-card">
+        <h2 style="color: var(--primary-color); margin-bottom: 8px; font-size: 1.8rem;">BARRA POS</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 0.9rem;">Ingresa tus credenciales</p>
+        
+        <form id="login-form" onsubmit="window.login(event)">
+            <div class="form-group">
+                <input type="text" id="username" placeholder="Usuario (ej: admin o barra1)" required autocomplete="off">
             </div>
-        </div>
+            <div class="form-group">
+                <input type="password" id="password" placeholder="Contraseña" required>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 10px; font-size: 1.1rem; padding: 14px;">Ingresar al Sistema</button>
+        </form>
     </div>
 </body>
 </html>
