@@ -19,7 +19,12 @@ const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
 const secondaryAuth = getAuth(secondaryApp);
 
 let currentUserRole = null;
-let currentUserName = "Usuario";
+let currentUserName = "Vendedor";
+
+// Memoria interna del Carrito de Alta Velocidad
+let LOCAL_CART = {};
+let MASTER_ITEMS = [];
+let ACTIVE_CATEGORY_FILTER = "TODOS";
 
 window.showModal = (title, message) => {
     const overlay = document.createElement('div');
@@ -41,21 +46,23 @@ onAuthStateChanged(auth, async (user) => {
             const userDoc = await getDoc(doc(db, "usuarios", user.uid));
             if (userDoc.exists()) {
                 currentUserRole = userDoc.data().rol;
-                currentUserName = userDoc.data().username || "Admin";
+                currentUserName = userDoc.data().username || "Cajero";
                 applyRoleRestrictions();
             }
         } catch (e) { console.log(e); }
 
+        // REDIRECCIÓN INTELIGENTE: Si es Vendedor, va directo a Ventas Rápida
         if (currentPath.includes('login.html') || currentPath.endsWith('/') || currentPath.endsWith('index.html')) {
-            window.location.href = 'dashboard.html';
+            if (currentUserRole === 'Cajero' || currentUserRole === 'Barra') {
+                window.location.href = 'ventas.html';
+            } else {
+                window.location.href = 'dashboard.html';
+            }
         }
         
         if (currentPath.includes('usuarios.html')) window.loadUsers();
-        if (currentPath.includes('productos.html')) {
-            window.loadCategories();
-            window.loadProducts();
-        }
-        if (currentPath.includes('ventas.html')) window.loadProductsForSale();
+        if (currentPath.includes('productos.html')) { window.loadCategories(); window.loadProducts(); }
+        if (currentPath.includes('ventas.html')) { window.loadPOSMenu(); }
         if (currentPath.includes('movimientos.html') || currentPath.includes('dashboard.html')) window.loadMovements();
         if (currentPath.includes('dashboard.html')) window.loadDashboard();
     } else {
@@ -73,204 +80,241 @@ function applyRoleRestrictions() {
 }
 
 // ==========================================
-// MÓDULO: CATEGORÍAS PERSONALIZADAS
+// MÓDULO INTERFAZ POS DE ALTA VELOCIDAD
+// ==========================================
+window.loadPOSMenu = async () => {
+    const grid = document.getElementById('pos_grid');
+    const catBar = document.getElementById('pos_categories_bar');
+    if (!grid) return;
+
+    try {
+        // 1. Cargar Categorías en la Barra superior
+        const catSnapshot = await getDocs(query(collection(db, "categorias"), orderBy("nombre")));
+        catBar.innerHTML = `<button class="category-btn ${ACTIVE_CATEGORY_FILTER === 'TODOS' ? 'active':''}" onclick="window.filterPOSCategory('TODOS')">🌟 TODOS</button>`;
+        catSnapshot.forEach(doc => {
+            const c = doc.data();
+            catBar.innerHTML += `<button class="category-btn ${ACTIVE_CATEGORY_FILTER === c.nombre ? 'active':''}" onclick="window.filterPOSCategory('${c.nombre}')">🏷️ ${c.nombre}</button>`;
+        });
+
+        // 2. Cargar Artículos Maestros
+        const snapshot = await getDocs(query(collection(db, "productos"), orderBy("nombre")));
+        MASTER_ITEMS = [];
+        snapshot.forEach(doc => {
+            MASTER_ITEMS.push({ id: doc.id, ...doc.data() });
+        });
+
+        window.renderPOSGrid(MASTER_ITEMS);
+    } catch (e) { console.error(e); }
+};
+
+window.renderPOSGrid = (items) => {
+    const grid = document.getElementById('pos_grid');
+    grid.innerHTML = '';
+
+    items.forEach(item => {
+        const isLowStock = item.stock <= 5;
+        const qty = LOCAL_CART[item.id] ? LOCAL_CART[item.id].cantidad : 1;
+        
+        const card = document.createElement('div');
+        card.className = `articulo-card ${isLowStock ? 'stock-bajo' : ''}`;
+        card.innerHTML = `
+            ${item.tipo_articulo === 'Promo' ? '<span class="badge-promo">PROMO</span>' : ''}
+            <div class="articulo-info">
+                <h4>${item.nombre}</h4>
+                <p class="presentation">${item.marca}</p>
+                ${isLowStock ? `<p class="stock-alerta-text">⚠️ ÚLTIMAS ${item.stock} UNID.</p>` : ''}
+            </div>
+            <div>
+                <div class="articulo-price">$${item.precio_venta}</div>
+                <div class="quantity-control">
+                    <button class="quantity-btn" onclick="window.changeQTY('${item.id}', -1, ${item.stock})">-</button>
+                    <div class="quantity-value" id="qty_${item.id}">${qty}</div>
+                    <button class="quantity-btn" onclick="window.changeQTY('${item.id}', 1, ${item.stock})">+</button>
+                </div>
+                <button class="add-btn" onclick="window.addToCart('${item.id}')">AGREGAR</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+};
+
+window.changeQTY = (id, delta, maxStock) => {
+    const el = document.getElementById(`qty_${id}`);
+    let currentQty = Number(el.innerText);
+    currentQty += delta;
+    if (currentQty < 1) currentQty = 1;
+    if (currentQty > maxStock) {
+        showModal("Límite de Stock", "No puedes vender más del stock real en barra.");
+        currentQty = maxStock;
+    }
+    el.innerText = currentQty;
+    
+    // Si ya estaba en el carrito, actualizar cantidad de fondo
+    if (LOCAL_CART[id]) {
+        LOCAL_CART[id].cantidad = currentQty;
+        window.updateCartUI();
+    }
+};
+
+window.addToCart = (id) => {
+    const item = MASTER_ITEMS.find(i => i.id === id);
+    const targetQty = Number(document.getElementById(`qty_${id}`).innerText);
+
+    LOCAL_CART[id] = {
+        nombre: item.nombre,
+        precio: item.precio_venta,
+        cantidad: targetQty
+    };
+
+    window.updateCartUI();
+};
+
+window.updateCartUI = () => {
+    const totalEl = document.getElementById('carrito-total');
+    const countEl = document.getElementById('carrito-count');
+    
+    let total = 0;
+    let count = 0;
+
+    Object.keys(LOCAL_CART).forEach(id => {
+        total += LOCAL_CART[id].precio * LOCAL_CART[id].cantidad;
+        count += LOCAL_CART[id].cantidad;
+    });
+
+    totalEl.innerText = `$${total}`;
+    countEl.innerText = `${count} artículos listos`;
+};
+
+window.filterPOSCategory = (categoryName) => {
+    ACTIVE_CATEGORY_FILTER = categoryName;
+    window.filterPOSItems();
+    window.loadPOSMenu(); // Renderizado de estado de botones
+};
+
+window.filterPOSItems = () => {
+    const searchVal = document.getElementById('pos_search').value.toLowerCase().trim();
+    
+    let filtered = MASTER_ITEMS;
+
+    // Filtro por categoría
+    if (ACTIVE_CATEGORY_FILTER !== 'TODOS') {
+        filtered = filtered.filter(i => i.categoria === ACTIVE_CATEGORY_FILTER);
+    }
+
+    // Filtro por buscador rápido
+    if (searchVal !== '') {
+        filtered = filtered.filter(i => i.nombre.toLowerCase().includes(searchVal) || i.marca.toLowerCase().includes(searchVal));
+    }
+
+    window.renderPOSGrid(filtered);
+};
+
+window.checkoutPOS = async () => {
+    if (Object.keys(LOCAL_CART).length === 0) {
+        showModal("Carrito Vacío", "Agrega al menos un artículo para cobrar.");
+        return;
+    }
+
+    const metodoPago = document.getElementById('pos_metodo_pago').value;
+
+    try {
+        // Ejecutar transacciones por cada ítem del carrito flotante
+        for (const id of Object.keys(LOCAL_CART)) {
+            const cartItem = LOCAL_CART[id];
+            const productRef = doc(db, "productos", id);
+            const freshSnap = await getDoc(productRef);
+            const currentStock = freshSnap.data().stock;
+
+            const finalTotal = cartItem.precio * cartItem.cantidad;
+
+            // Registrar Venta
+            await addDoc(collection(db, "ventas"), {
+                producto_id: id,
+                producto_nombre: cartItem.nombre,
+                cantidad: cartItem.cantidad,
+                total: finalTotal,
+                metodo_pago: metodoPago,
+                usuario: currentUserName,
+                fecha: serverTimestamp()
+            });
+
+            // Descontar
+            await updateDoc(productRef, { stock: currentStock - cartItem.cantidad });
+            // Movimiento
+            await window.logMovement('Venta POS', cartItem.nombre, -cartItem.cantidad, `Caja Rápida - ${metodoPago}`);
+        }
+
+        showModal("¡Cobrado!", "Venta registrada. Carrito limpio.");
+        LOCAL_CART = {};
+        window.updateCartUI();
+        window.loadPOSMenu();
+    } catch (e) {
+        showModal("Error", "Ocurrió un fallo en el cobro rápido.");
+    }
+};
+
+// ==========================================
+// MÓDULO ANTERIOR ADAPTADO (ADMINISTRACIÓN)
 // ==========================================
 window.saveCategory = async (e) => {
     e.preventDefault();
     const nameInput = document.getElementById('new_category_name');
-    const name = nameInput.value.trim();
-
     try {
-        await addDoc(collection(db, "categorias"), { nombre: name, fecha: serverTimestamp() });
-        showModal("¡Éxito!", `Categoría "${name}" creada correctamente.`);
+        await addDoc(collection(db, "categorias"), { nombre: nameInput.value.trim() });
         nameInput.value = '';
         window.loadCategories();
-    } catch (error) {
-        showModal("Error", "No se pudo guardar la categoría.");
-    }
+    } catch (error) { console.log(error); }
 };
 
 window.loadCategories = async () => {
     const select = document.getElementById('categoria');
     if (!select) return;
-
-    try {
-        const snapshot = await getDocs(query(collection(db, "categorias"), orderBy("nombre")));
-        select.innerHTML = '<option value="" disabled selected>-- Elige una categoría --</option>';
-        if(snapshot.empty) {
-            select.innerHTML = '<option value="" disabled>Crea una categoría arriba primero</option>';
-            return;
-        }
-        snapshot.forEach(doc => {
-            const cat = doc.data();
-            select.innerHTML += `<option value="${cat.nombre}">${cat.nombre}</option>`;
-        });
-    } catch (error) {
-        select.innerHTML = '<option value="" disabled>Error cargando categorías</option>';
-    }
+    const snapshot = await getDocs(query(collection(db, "categorias"), orderBy("nombre")));
+    select.innerHTML = '<option value="" disabled selected>-- Elige una categoría --</option>';
+    snapshot.forEach(doc => { select.innerHTML += `<option value="${doc.data().nombre}">${doc.data().nombre}</option>`; });
 };
 
-// ==========================================
-// MÓDULO: LIMPIAR REGISTRO / CERRAR CAJA
-// ==========================================
-window.clearDailyRegister = async () => {
-    if (confirm("¿Estás seguro de cerrar la caja de hoy? Las estadísticas del resumen volverán a cero, pero el historial no se borrará.")) {
-        try {
-            const timestampActual = new Date().getTime();
-            localStorage.setItem('caja_clean_timestamp', timestampActual);
-            showModal("Caja Cerrada", "El resumen diario se ha reiniciado.");
-            if (window.location.pathname.includes('dashboard.html')) window.loadDashboard();
-        } catch (error) {
-            showModal("Error", "No se pudo limpiar el registro.");
-        }
-    }
-};
-
-// ==========================================
-// MÓDULO: DASHBOARD
-// ==========================================
-window.loadDashboard = async () => {
-    const elVentasDia = document.getElementById('ventas-dia');
-    const elRecEfectivo = document.getElementById('rec-efectivo');
-    const elRecTransf = document.getElementById('rec-transf');
-    if (!elVentasDia) return;
-
-    try {
-        const q = query(collection(db, "ventas"));
-        const snapshot = await getDocs(q);
-
-        let ventasDia = 0;
-        let recEfectivo = 0;
-        let recTransf = 0;
-
-        const hoy = new Date();
-        let startFilterTime = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
-        
-        const manualReset = localStorage.getItem('caja_clean_timestamp');
-        if (manualReset) {
-            startFilterTime = Math.max(startFilterTime, Number(manualReset));
-        }
-
-        snapshot.forEach(doc => {
-            const venta = doc.data();
-            if (venta.fecha) {
-                const fechaVenta = venta.fecha.toDate().getTime();
-                if (fechaVenta >= startFilterTime) {
-                    ventasDia += venta.cantidad;
-                    if (venta.metodo_pago === 'Efectivo') recEfectivo += venta.total;
-                    if (venta.metodo_pago === 'Transferencia') recTransf += venta.total;
-                }
-            }
-        });
-
-        elVentasDia.innerText = ventasDia;
-        elRecEfectivo.innerText = `$${recEfectivo}`;
-        elRecTransf.innerText = `$${recTransf}`;
-    } catch (error) { console.error(error); }
-};
-
-// ==========================================
-// MÓDULO: ARTÍCULOS
-// ==========================================
 window.saveProduct = async (e) => {
     e.preventDefault();
     const producto = {
         nombre: document.getElementById('nombre').value,
         categoria: document.getElementById('categoria').value,
         marca: document.getElementById('marca').value,
-        precio_compra: Number(document.getElementById('precio_compra').value),
         precio_venta: Number(document.getElementById('precio_venta').value),
         stock: Number(document.getElementById('stock').value),
-        stock_minimo: Number(document.getElementById('stock_minimo').value),
-        unidad: document.getElementById('unidad').value,
-        estado: 'Activo',
-        fecha_creacion: serverTimestamp()
+        tipo_articulo: document.getElementById('tipo_articulo').value,
+        precio_compra: 0, stock_minimo: 5, unidad: 'U', estado: 'Activo', fecha_creacion: serverTimestamp()
     };
     try {
         await addDoc(collection(db, "productos"), producto);
-        await window.logMovement('Creación', producto.nombre, producto.stock, 'Ingreso inicial de artículo');
-        showModal("¡Éxito!", "Artículo guardado en el inventario.");
+        await window.logMovement('Creación', producto.nombre, producto.stock, 'Ingreso artículo');
         document.getElementById('form-producto').reset();
         window.loadProducts();
-    } catch (error) { showModal("Error", "No se pudo guardar."); }
+    } catch (e) { console.log(e); }
 };
 
 window.loadProducts = async () => {
     const tbody = document.getElementById('productos-tbody');
     if (!tbody) return;
-    try {
-        const snapshot = await getDocs(query(collection(db, "productos"), orderBy("nombre")));
-        tbody.innerHTML = '';
-        if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay artículos registrados.</td></tr>`;
-            return;
-        }
-        snapshot.forEach(doc => {
-            const p = doc.data();
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight: bold;">${p.nombre}</td>
-                <td><span style="background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius:6px;">${p.categoria || 'Sin cat.'}</span></td>
-                <td>${p.marca}</td>
-                <td>$${p.precio_venta}</td>
-                <td style="color: ${p.stock <= p.stock_minimo ? 'var(--danger-color)' : 'var(--success-color)'}; font-weight: bold;">${p.stock} ${p.unidad}</td>
-                <td><button onclick="window.deleteProduct('${doc.id}')" class="logout-btn" style="padding: 6px 12px; margin:0; font-size: 0.8rem;">Eliminar</button></td>
-            `;
-            tbody.appendChild(tr);
-        });
-    } catch (error) { tbody.innerHTML = `<tr><td colspan="6">Error de conexión.</td></tr>`; }
+    const snapshot = await getDocs(query(collection(db, "productos"), orderBy("nombre")));
+    tbody.innerHTML = '';
+    snapshot.forEach(doc => {
+        const p = doc.data();
+        tbody.innerHTML += `<tr>
+            <td><strong>${p.nombre}</strong></td>
+            <td>${p.categoria}</td>
+            <td>${p.marca}</td>
+            <td>$${p.precio_venta}</td>
+            <td>${p.stock}</td>
+            <td><button onclick="window.deleteProduct('${doc.id}')" class="logout-btn" style="padding:4px 8px; margin:0;">X</button></td>
+        </tr>`;
+    });
 };
 
 window.deleteProduct = async (id) => {
-    if (confirm("¿Eliminar este artículo permanentemente?")) {
-        try { await deleteDoc(doc(db, "productos", id)); window.loadProducts(); } catch (e) { showModal("Error", "No se pudo borrar."); }
-    }
+    if (confirm("¿Borrar artículo?")) { await deleteDoc(doc(db, "productos", id)); window.loadProducts(); }
 };
 
-// ==========================================
-// MÓDULO: VENTAS
-// ==========================================
-window.loadProductsForSale = async () => {
-    const select = document.getElementById('producto_select');
-    if (!select) return;
-    try {
-        const snapshot = await getDocs(query(collection(db, "productos"), orderBy("nombre")));
-        select.innerHTML = '<option value="" disabled selected>-- Elige un artículo --</option>';
-        snapshot.forEach(doc => {
-            const p = doc.data();
-            select.innerHTML += `<option value="${doc.id}">[${p.stock} disp.] - ${p.nombre} ($${p.precio_venta})</option>`;
-        });
-    } catch (e) { console.log(e); }
-};
-
-window.registerSale = async (e) => {
-    e.preventDefault();
-    const productId = document.getElementById('producto_select').value;
-    const cantidad = Number(document.getElementById('cantidad').value);
-    const metodoPago = document.getElementById('metodo_pago').value;
-
-    try {
-        const productRef = doc(db, "productos", productId);
-        const productSnap = await getDoc(productRef);
-        const p = productSnap.data();
-
-        if (p.stock < cantidad) {
-            showModal("Stock Insuficiente", `Solo quedan ${p.stock} unidades.`);
-            return;
-        }
-        const total = p.precio_venta * cantidad;
-        await addDoc(collection(db, "ventas"), { producto_id: productId, producto_nombre: p.nombre, cantidad: cantidad, total: total, metodo_pago: metodoPago, usuario: currentUserName, fecha: serverTimestamp() });
-        await updateDoc(productRef, { stock: p.stock - cantidad });
-        await window.logMovement('Venta', p.nombre, -cantidad, `Venta en ${metodoPago}`);
-        showModal("Venta Exitosa", `Total: $${total}`);
-        document.getElementById('form-venta').reset();
-        window.loadProductsForSale();
-    } catch (error) { showModal("Error", "Venta cancelada por error."); }
-};
-
-// ==========================================
-// MOVIMIENTOS
-// ==========================================
 window.logMovement = async (accion, producto, cantidad, observaciones) => {
     try { await addDoc(collection(db, "movimientos"), { fecha: serverTimestamp(), usuario: currentUserName, accion: accion, producto: producto, cantidad: cantidad, observaciones: observaciones }); } catch (e) {}
 };
@@ -278,23 +322,33 @@ window.logMovement = async (accion, producto, cantidad, observaciones) => {
 window.loadMovements = async () => {
     const tbody = document.getElementById('movimientos-tbody');
     if (!tbody) return;
-    try {
-        const snapshot = await getDocs(query(collection(db, "movimientos"), orderBy("fecha", "desc")));
-        tbody.innerHTML = '';
-        if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Sin movimientos.</td></tr>`;
-            return;
-        }
-        snapshot.forEach(doc => {
-            const m = doc.data();
-            let f = m.fecha ? m.fecha.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Ahora";
-            tbody.innerHTML += `<tr>
-                <td>${f}</td>
-                <td><span style="background:${m.cantidad > 0 ? 'rgba(16,185,129,0.2)':'rgba(59,130,246,0.2)'}; color:${m.cantidad > 0 ? 'var(--success-color)':'var(--primary-color)'}; padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:bold;">${m.accion}</span></td>
-                <td>${m.producto}</td>
-                <td>${m.cantidad}</td>
-                <td>${m.observaciones}</td>
-            </tr>`;
-        });
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="5">Error de red.</td></tr>`; }
+    const snapshot = await getDocs(query(collection(db, "movimientos"), orderBy("fecha", "desc")));
+    tbody.innerHTML = '';
+    snapshot.forEach(doc => {
+        const m = doc.data();
+        let f = m.fecha ? m.fecha.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Ahora";
+        tbody.innerHTML += `<tr>
+            <td>${f}</td>
+            <td><span style="color:var(--primary-color)">${m.accion}</span></td>
+            <td>${m.producto}</td>
+            <td>${m.cantidad}</td>
+            <td>${m.observaciones}</td>
+        </tr>`;
+    });
+};
+
+window.loadDashboard = async () => {
+    const ev = document.getElementById('ventas-dia');
+    const ef = document.getElementById('rec-efectivo');
+    const et = document.getElementById('rec-transf');
+    if (!ev) return;
+    const snapshot = await getDocs(collection(db, "ventas"));
+    let v = 0, e = 0, t = 0;
+    snapshot.forEach(doc => {
+        const d = doc.data();
+        v += d.cantidad;
+        if (d.metodo_pago === 'Efectivo') e += d.total;
+        if (d.metodo_pago === 'Transferencia') t += d.total;
+    });
+    ev.innerText = v; ef.innerText = `$${e}`; et.innerText = `$${t}`;
 };

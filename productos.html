@@ -12,86 +12,76 @@
         <h2>BAR CONTROL</h2>
         <a href="dashboard.html">Resumen</a>
         <a href="productos.html" class="active">Artículos</a>
-        <a href="ventas.html">Ventas</a>
+        <a href="ventas.html">Venta Rápida</a>
         <a href="movimientos.html">Movimientos</a>
         <a href="reportes.html" class="admin-only">Reportes</a>
         <a href="usuarios.html" class="admin-only">Usuarios</a>
         <button onclick="window.logout()" class="logout-btn">Salir</button>
     </nav>
-    <main>
-        <h1>Gestión de Artículos</h1>
+    <main class="main-scroll" style="padding-bottom: 40px;">
+        <h1>Control de Artículos y Promos</h1>
 
-        <div class="card" style="margin-bottom: 20px; background-color: #1a1a24;">
-            <h3 style="color: var(--primary-color);">+ Crear Nueva Categoría</h3>
+        <div class="card" style="margin-bottom: 20px;">
+            <h3>+ Crear Nueva Categoría</h3>
             <form id="form-categoria" onsubmit="window.saveCategory(event)" style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
-                <input type="text" id="new_category_name" placeholder="Ej: Bebidas, Comida, Cigarrillos..." style="flex: 1; min-width: 200px;" required autocomplete="off">
+                <input type="text" id="new_category_name" placeholder="Ej: Cervezas, Vinos, Promos..." style="flex: 1; min-width: 200px;" required autocomplete="off">
                 <button type="submit" class="btn-primary" style="padding: 10px 20px;">Agregar</button>
             </form>
         </div>
         
         <div class="card" style="margin-bottom: 30px;">
-            <h3>Agregar Nuevo Artículo</h3>
+            <h3>Registrar Artículo o Promoción</h3>
             <form id="form-producto" onsubmit="window.saveProduct(event)">
                 <div class="dashboard-grid">
                     <div class="form-group">
-                        <label>Nombre del Artículo</label>
-                        <input type="text" id="nombre" placeholder="Ej: Quilmes 1L" required autocomplete="off">
+                        <label>Nombre Comercial</label>
+                        <input type="text" id="nombre" placeholder="Ej: Quilmes 1L o Combo Fernet" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label>Categoría</label>
-                        <select id="categoria" required>
-                            <option value="" disabled selected>Cargando categorías...</option>
-                        </select>
+                        <select id="categoria" required></select>
                     </div>
                     <div class="form-group">
-                        <label>Marca / Distribuidor</label>
-                        <input type="text" id="marca" placeholder="Ej: Quilmes" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>Precio Compra ($)</label>
-                        <input type="number" id="precio_compra" placeholder="0" required>
+                        <label>Presentación / Tamaño</label>
+                        <input type="text" id="marca" placeholder="Ej: Botella 1L / 1 Botella + 3 Speeds" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label>Precio Venta ($)</label>
                         <input type="number" id="precio_venta" placeholder="0" required>
                     </div>
                     <div class="form-group">
-                        <label>Stock Inicial</label>
+                        <label>Stock Disponible</label>
                         <input type="number" id="stock" placeholder="0" required>
                     </div>
                     <div class="form-group">
-                        <label>Stock Mínimo Alerta</label>
-                        <input type="number" id="stock_minimo" placeholder="5" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Unidad de medida</label>
-                        <select id="unidad">
-                            <option value="Unidades">Unidades (U)</option>
-                            <option value="Litros">Litros (L)</option>
-                            <option value="Medidas">Medidas</option>
+                        <label>Tipo de Artículo</label>
+                        <select id="tipo_articulo">
+                            <option value="Normal">Artículo Normal</option>
+                            <option value="Promo">Promoción / Combo Especial</option>
                         </select>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary">Guardar Artículo</button>
+                <input type="hidden" id="precio_compra" value="0">
+                <input type="hidden" id="stock_minimo" value="5">
+                <input type="hidden" id="unidad" value="U">
+                <button type="submit" class="btn-primary">Guardar en Sistema</button>
             </form>
         </div>
 
-        <h3>Lista de Artículos en Inventario</h3>
+        <h3>Inventario Maestro</h3>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>Artículo</th>
+                        <th>Nombre</th>
                         <th>Categoría</th>
-                        <th>Marca</th>
+                        <th>Presentación</th>
                         <th>Precio Venta</th>
-                        <th>Stock Actual</th>
-                        <th>Acciones</th>
+                        <th>Stock</th>
+                        <th>Acción</th>
                     </tr>
                 </thead>
-                <tbody id="productos-tbody">
-                    <tr><td colspan="6" style="text-align: center;">Cargando inventario...</td></tr>
-                </tbody>
+                <tbody id="productos-tbody"></tbody>
             </table>
         </div>
     </main>
