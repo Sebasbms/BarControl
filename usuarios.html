@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios - Control de Barra</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js" defer></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>BAR CONTROL</h2>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="productos.html">Productos</a>
+        <a href="ventas.html">Ventas</a>
+        <a href="movimientos.html">Movimientos</a>
+        <a href="reportes.html" class="admin-only">Reportes</a>
+        <a href="usuarios.html" class="active admin-only">Usuarios</a>
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="window.logout()" class="logout-btn">Cerrar Sesión</button>
+        </div>
+    </nav>
+    <main>
+        <h1>Gestión de Usuarios</h1>
+        <div class="card">
+            <h3>Información de Seguridad</h3>
+            <p style="color: var(--text-secondary); margin-top: 10px;">
+                Por motivos de seguridad, la creación de nuevos usuarios y el cambio de contraseñas se realiza directamente desde el panel de <strong>Firebase Authentication</strong>.
+                <br><br>
+                Recuerda que si creas un cajero nuevo (ejemplo: <code>barra1</code>), en Firebase debes registrarlo como <code>barra1@fogon.com</code>.
+            </p>
+        </div>
+    </main>
+</body>
+</html>
